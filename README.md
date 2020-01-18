@@ -12,7 +12,9 @@ Export your Nanjing University class schedule as `.ics` or `.csv`.
 
 用法
 ====
-执行`./kbparse.py -t 20192`（`2019`表示2019-2020学年，2表示下学期）并按提示操作即可。默认保存为`ics`格式。
+执行`./kbparse.py -t 20192`（`2019`表示2019-2020学年，`2`表示下学期）并按提示操作即可。
+
+默认输出文件名示例：`NJUClassSchedule-2020-01-18T13:24:01.652600.ics`。
 
 详见`./kbparse.py -h`。
 
