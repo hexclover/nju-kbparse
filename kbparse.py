@@ -25,7 +25,7 @@ defaultTermLength = 20
 defaultClassScheduleURI = 'https://wx.nju.edu.cn/njukb/wap/default/classes'
 lessonLength = dt.timedelta(minutes=50)
 lessonStartTime = list(map(lambda x: x, ['08:00','09:00','10:10','11:10','14:00','15:00','16:10','17:10','18:30', '19:30','20:40','21:30']))
-defaultFirstDay = '2020-02-17'
+#defaultFirstDay = '2020-02-17'
 oneWeek = dt.timedelta(days = 7)
 timeZone = pytz.timezone('Asia/Shanghai')
 #timeZone = dt.timezone(dt.timedelta(hours=8))
@@ -325,7 +325,7 @@ def fetchClassData(date, eaiSess, uri = defaultClassScheduleURI):
 def getFirstDay(eaiSess, term: tuple, uri = defaultClassScheduleURI) -> dt.date:
     assert term[1] in [1, 2]
     if term[1] == 1:
-        date = dt.date(year = term[0], month = 9, day = 3)
+        date = dt.date(year = term[0], month = 10, day = 1)
     else:
         date = dt.date(year = term[0] + 1, month = 3, day = 1)
     courseData = fetchClassData(date, eaiSess, uri)
@@ -340,6 +340,7 @@ def getFirstDay(eaiSess, term: tuple, uri = defaultClassScheduleURI) -> dt.date:
                 raise
     if weekNumber == 0:
         logging.error('猜测学期首日失败，请使用-d手动指定')
+        logging.debug('Week name returned by server: {}'.format(courseData['dateInfo']['name']))
         return 'error'
     firstDay = dt.date.fromisoformat(sorted(courseData['weekdays'])[0]) - oneWeek * (weekNumber - 1)
     return firstDay
@@ -385,7 +386,7 @@ def readOptions():
     parser.add_argument('-k', '--eai-sess', dest='eaiSess', help='Cookie中eai-sess的值，用于认证')
     # specify at most one of firstDay and termNumber
     gTerm = parser.add_mutually_exclusive_group()
-    gTerm.add_argument('-d', '--first-day', dest='firstDay', help='学期的第一天，默认为{}'.format(defaultFirstDay), type=argDate)
+    gTerm.add_argument('-d', '--first-day', dest='firstDay', help='学期的第一天', type=argDate)
     gTerm.add_argument('-t', '--term', dest='termName', help='学期，如20192表示2019-2020学年下学期', type=argTermName)
     parser.add_argument('-L', '--use-location', dest='useLocation', action='store_true', help='输出“地点”（可能含校区）而非“教室”')
     parser.add_argument('-o', dest='outputFile', help='输出文件名，-代表标准输出')
@@ -411,17 +412,30 @@ def main():
     courseIDRegEx = options['courseIDRegEx']
     courseNameRegEx = options['courseNameRegEx']
 
+    if not eaiSess:
+        logging.warning('在下面输入eai-sess的值。')
+        logging.warning('这个值可以在登录“南京大学信息门户”（https://wx.nju.edu.cn/homepage/wap/default/home/）后在cookie中找到。')
+        eaiSess = input()
+
     # store first day of term in firstDay
-    if options['termName']:
-        if (firstDay := getFirstDay(eaiSess, options['termName'])) == 'error':
-            return 1
-        logging.warning('猜测学期{}的第一天为{}'.format(options['termName'], firstDay))
-    elif options['firstDay']:
+    if options['firstDay']:
         firstDay = options['firstDay']
         logging.warning('已指定学期首日：{}'.format(firstDay))
     else:
-        firstDay = argDate(defaultFirstDay)
-        logging.warning('默认学期首日：{}'.format(firstDay))
+        if not options['termName']:
+            optToday = dt.date.today()
+            if optToday.month in [1, 2, 3, 4, 5, 6]:
+                # Spring
+                optTerm = (optToday.year - 1, 2)
+            elif optToday.month in [7, 8, 9, 10, 11, 12]:
+                # Fall
+                optTerm = (optToday.year, 1)
+            logging.warning('未指定学期，使用{}'.format(''.join(map(str, optTerm))))
+        else:
+            optTerm = options['termName']
+        if (firstDay := getFirstDay(eaiSess, optTerm)) == 'error':
+            return 1
+        logging.warning('未指定学期首日，猜测为{}'.format(firstDay))
 
     # determine output file name and format (and suffix)
     if options['outputFile'] not in [None, '-']:
@@ -446,11 +460,6 @@ def main():
                 outputFormat = defaultOutputFormat
             outputFileSuffix = outputFormat
             outputFileName = 'NJUClassSchedule-{}.{}'.format(dt.datetime.today().isoformat(), outputFormat)
-
-    if not eaiSess:
-        logging.warning('在下面输入eai-sess的值。')
-        logging.warning('这个值可以在登录“南京大学信息门户”（https://wx.nju.edu.cn/homepage/wap/default/home/）后在cookie中找到。')
-        eaiSess = input()
 
     logging.warning('正在生成这些周的日程表：{}'.format(weeks))
 
@@ -478,7 +487,7 @@ def main():
                 schedule.termName = termName = weekData.termName
                 logging.warning('本学期是{}'.format(termName))
             elif weekData.weekNumber == 0 or weekData.termName != termName:
-                logging.debug('Reached week {}.'.format(weekData.weekName))
+                logging.debug('Reached week {}, probably the next term.'.format(weekData.weekName))
                 if ww[1] == float('inf'):
                     logging.warning('本学期共有{}周'.format(weekNumber - 1))
                     break
