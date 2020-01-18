@@ -1,2 +1,4 @@
+all:
+
 clean:
-	-rm -rf __pycache__ *.ics *.csv
+	-rm -rf __pycache__ NJUClassSchedule*.csv
