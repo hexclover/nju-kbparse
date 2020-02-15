@@ -1,5 +1,6 @@
 #!/bin/bash
 prog="./kbparse.py"
+[ "$cert" ] && prog="$prog --cert $cert"
 [ -z "$key" ] && read key
 
 make clean

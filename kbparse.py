@@ -302,9 +302,9 @@ def argTermName(t: str) -> tuple:
     except ValueError:
         raise argparse.ArgumentTypeError(msg)
 
-def fetchClassData(date, eaiSess, uri = defaultClassScheduleURI):
-    response = requests.post(uri, headers={'Cookie': 'eai-sess={}'.format(eaiSess)}, data={'date': date}
-    )
+def fetchClassData(date, eaiSess, uri = defaultClassScheduleURI, cert = None):
+    verify = cert or True
+    response = requests.post(uri, headers={'Cookie': 'eai-sess={}'.format(eaiSess)}, data={'date': date}, verify=verify)
     response = response.content.decode()
     try:
         response = dict(json.loads(response)) # Hint for pylint
@@ -322,13 +322,13 @@ def fetchClassData(date, eaiSess, uri = defaultClassScheduleURI):
     courseData = response['d']
     return courseData
 
-def getFirstDay(eaiSess, term: tuple, uri = defaultClassScheduleURI) -> dt.date:
+def getFirstDay(eaiSess, term: tuple, uri = defaultClassScheduleURI, cert = None) -> dt.date:
     assert term[1] in [1, 2]
     if term[1] == 1:
         date = dt.date(year = term[0], month = 10, day = 1)
     else:
         date = dt.date(year = term[0] + 1, month = 3, day = 1)
-    courseData = fetchClassData(date, eaiSess, uri)
+    courseData = fetchClassData(date, eaiSess, uri, cert)
     weekNumber = 0
     for w in courseData['dateInfo']['name'].strip().split(' '):
         if (w[0], w[-1]) == ('第', '周'):
@@ -345,11 +345,11 @@ def getFirstDay(eaiSess, term: tuple, uri = defaultClassScheduleURI) -> dt.date:
     firstDay = dt.date.fromisoformat(sorted(courseData['weekdays'])[0]) - oneWeek * (weekNumber - 1)
     return firstDay
 
-def fetchAndParseClassData(date, eaiSess, uri = defaultClassScheduleURI, weekNumber = float('inf')) -> UWeek:
+def fetchAndParseClassData(date, eaiSess, uri = defaultClassScheduleURI, weekNumber = float('inf'), cert = None) -> UWeek:
     """
     Leave weekNumber empty to use server provided weekName.
     """
-    courseData = fetchClassData(date, eaiSess, uri)
+    courseData = fetchClassData(date, eaiSess, uri, cert=cert)
 
     # parsing
     weekName = courseData['dateInfo']['name'].strip()
@@ -396,6 +396,7 @@ def readOptions():
     parser.add_argument('-c', '--course-id', dest='courseIDRegEx', help='课程编号（正则，前缀）', type=re.compile)
     parser.add_argument('-n', '--course-name', dest='courseNameRegEx', help='课程名（正则，部分）', type=re.compile)
     parser.add_argument('-w', '--weeks', dest='weeks', type=argWeekList, help='要生成日程表的周数，例如“2”, “1-”, “1,2-5,3”', default=argWeekList('1-'))
+    parser.add_argument('--cert', help='连接服务器时使用的证书')
 
     options = vars(parser.parse_args())
     return options
@@ -411,6 +412,7 @@ def main():
     weeks = options['weeks']
     courseIDRegEx = options['courseIDRegEx']
     courseNameRegEx = options['courseNameRegEx']
+    cert = options['cert']
 
     if not eaiSess:
         logging.warning('在下面输入eai-sess的值。')
@@ -433,7 +435,7 @@ def main():
             logging.warning('未指定学期，使用{}'.format(''.join(map(str, optTerm))))
         else:
             optTerm = options['termName']
-        if (firstDay := getFirstDay(eaiSess, optTerm)) == 'error':
+        if (firstDay := getFirstDay(eaiSess, optTerm, cert=cert)) == 'error':
             return 1
         logging.warning('未指定学期首日，猜测为{}'.format(firstDay))
 
@@ -481,7 +483,7 @@ def main():
                 logging.warning('正在获取第{}周的信息'.format(weekNumber))
             firstDay = termFirstDay + oneWeek * (weekNumber - 1)
             logging.debug('Fetching courses for week {}'.format(weekNumber))
-            weekData = fetchAndParseClassData(date=firstDay.isoformat(), eaiSess=eaiSess, weekNumber=weekNumber)
+            weekData = fetchAndParseClassData(date=firstDay.isoformat(), eaiSess=eaiSess, weekNumber=weekNumber, cert=cert)
 
             if not termName:
                 schedule.termName = termName = weekData.termName

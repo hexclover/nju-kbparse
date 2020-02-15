@@ -16,6 +16,8 @@ Export your Nanjing University class schedule as `.ics` or `.csv`.
 
 默认输出文件名示例：`NJUClassSchedule-2020-01-18T13:24:01.652600.ics`。
 
+2020-02-15: 如出现SSL错误，可以在清楚其含义的前提下尝试使用`--cert`选项。
+
 详见`./kbparse.py -h`。
 
 TODO
