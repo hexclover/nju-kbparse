@@ -417,7 +417,7 @@ def main():
 
     if not eaiSess:
         logging.warning('在下面输入eai-sess的值。')
-        logging.warning('这个值可以在登录“南京大学信息门户”（https://wx.nju.edu.cn/homepage/wap/default/home/）后在cookie中找到。')
+        logging.warning('这个值可以在登录“南京大学信息门户”（https://wx.nju.edu.cn/homepage/wap/default/home）后在cookies中找到。')
         eaiSess = input()
 
     # store first day of term in firstDay
