@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # Copyright (C) 2020, 0xCLOVER.
 # All rights reserved.
 
@@ -213,7 +213,8 @@ class USchedule:
         self.weeks.append(week)
         self.weeks.sort(key=lambda x: x.weekNumber)
         for c in week.coursePeriods:
-            if master := self.getCourseByID(c.courseID):
+            master = self.getCourseByID(c.courseID)
+            if master:
                 master.extend(c)
             else:
                 logging.warning('发现课程{}，课程ID：{}'.format(c.name, c.courseID))
@@ -435,7 +436,8 @@ def main():
             logging.warning('未指定学期，使用{}'.format(''.join(map(str, optTerm))))
         else:
             optTerm = options['termName']
-        if (firstDay := getFirstDay(eaiSess, optTerm, cert=cert)) == 'error':
+        firstDay = getFirstDay(eaiSess, optTerm, cert=cert)
+        if firstDay == 'error':
             return 1
         logging.warning('未指定学期首日，猜测为{}'.format(firstDay))
 
