@@ -217,7 +217,7 @@ class USchedule:
             if master:
                 master.extend(c)
             else:
-                logging.warning('发现课程{}，课程ID：{}'.format(c.name, c.courseID))
+                logging.warning('发现课程：{}，课程ID：{}'.format(c.name, c.courseID))
                 self.courses.append(UCourse(courseID=c.courseID, name=c.name, time=[c], teachers=c.teachers))
 
     def toCSV(self, useLocation: bool, regEx = []) -> str:
