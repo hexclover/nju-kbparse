@@ -165,11 +165,13 @@ class UCourse:
         for teacher in time.teachers:
             if teacher not in self.teachers:
                 self.teachers.append(teacher)
-        for t in [t for t in self.time if t.dayOfWeek == time.dayOfWeek and t.periods == time.periods]:
-            # TODO: check other properties
+        for t in filter(lambda t: all([t.dayOfWeek == time.dayOfWeek,
+                                       t.periods == time.periods,
+                                       t.location == time.location,
+                                       t.teachers == time.teachers]),
+                        self.time):
             for weekNumber in time.weeks:
                 t.extend(weekNumber)
-            repeated = True
             break
         else:
             self.time.append(time)
