@@ -278,19 +278,26 @@ def argWeekList(x: str) -> list:
     lst = []
     for s in x.split(','):
         msg = 'Invalid range: {}'
-        if s == '':
+        if s == '' or not s[0].isdigit():
             raise argparse.ArgumentTypeError(msg.format(x))
         ss = s.split('-')
         if len(ss) not in [1, 2]:
             raise argparse.ArgumentTypeError(msg.format(x))
         try:
-            if s[-1] == '-':
-                lst.append([int(ss[0]), float('inf')])
-            else:
-                lst.append([int(ss[0]), int(ss[-1])])
+            lo = int(ss[0])
+            hi = float('inf') if s.endswith('-') else int(ss[-1])
+            lst.append((lo, hi))
         except ValueError:
             raise argparse.ArgumentTypeError(msg.format(x))
-    #return sorted(lst, key=lambda x: x[0])
+    # sort and merge overlapping week ranges
+    lst.sort(key=lambda ww: ww[0])
+    i = 0
+    while i + 1 < len(lst):
+        if lst[i+1][0] <= lst[i][1]:
+            lst[i] = (lst[i][0], max(lst[i][1], lst[i+1][1]))
+            del lst[i+1]
+        else:
+            i += 1
     return lst
 
 def argTermName(t: str) -> tuple:
@@ -398,7 +405,8 @@ def readOptions():
     parser.add_argument('-p', '--dry-run', action='store_true', dest='actDryRun', help='只处理不输出')
     parser.add_argument('-c', '--course-id', dest='courseIDRegEx', help='课程编号（正则，前缀）', type=re.compile)
     parser.add_argument('-n', '--course-name', dest='courseNameRegEx', help='课程名（正则，部分）', type=re.compile)
-    parser.add_argument('-w', '--weeks', dest='weeks', type=argWeekList, help='要生成日程表的周数，例如“2”, “1-”, “1,2-5,3”', default=argWeekList('1-24'))
+    parser.add_argument('-w', '--weeks', dest='weeks', type=argWeekList, help='要生成日程表的周数，例如“2”, “1-”, “1,2-5,3”，默认为%(default)s', default=argWeekList('1-'))
+    parser.add_argument('--max-weeks', dest='maxWeeks', type=int, default=24, help='学期所含的最大周数，默认为%(default)s')
     parser.add_argument('--cert', help='连接服务器时使用的证书')
 
     options = vars(parser.parse_args())
@@ -413,6 +421,7 @@ def main():
     actDryRun   = options['actDryRun']
     logging.getLogger().setLevel(options['logLevel'].upper())
     weeks = options['weeks']
+    maxWeeks = options['maxWeeks']
     courseIDRegEx = options['courseIDRegEx']
     courseNameRegEx = options['courseNameRegEx']
     cert = options['cert']
@@ -478,7 +487,7 @@ def main():
         # if ww[1] is infinity continue processing until it's likely that the current term has ended
         weekNumber = ww[0]-1
 
-        while weekNumber < ww[1]:
+        while weekNumber < min(ww[1], maxWeeks):
             weekNumber += 1
             if weekNumber in processed:
                 logging.warning('已经处理过，跳过第{}周'.format(weekNumber))
