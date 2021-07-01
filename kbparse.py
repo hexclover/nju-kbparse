@@ -396,7 +396,7 @@ def readOptions():
     parser.add_argument('-p', '--dry-run', action='store_true', dest='actDryRun', help='只处理不输出')
     parser.add_argument('-c', '--course-id', dest='courseIDRegEx', help='课程编号（正则，前缀）', type=re.compile)
     parser.add_argument('-n', '--course-name', dest='courseNameRegEx', help='课程名（正则，部分）', type=re.compile)
-    parser.add_argument('-w', '--weeks', dest='weeks', type=argWeekList, help='要生成日程表的周数，例如“2”, “1-”, “1,2-5,3”', default=argWeekList('1-'))
+    parser.add_argument('-w', '--weeks', dest='weeks', type=argWeekList, help='要生成日程表的周数，例如“2”, “1-”, “1,2-5,3”', default=argWeekList('1-24'))
     parser.add_argument('--cert', help='连接服务器时使用的证书')
 
     options = vars(parser.parse_args())
